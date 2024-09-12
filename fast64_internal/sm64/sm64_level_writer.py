@@ -695,42 +695,66 @@ def parseLevelScript(filepath, levelName):
 
 
 def overwritePuppycamData(filePath, levelToReplace, newPuppycamTriggers):
-    # Splits the file into what's before, inside, and after the array
-    arrayEntiresRegex = "(.+struct\s+newcam_hardpos\s+newcam_fixedcam\[\]\s+=\s+{)(.+)(\};)"
-    # Splits the individual entries in the array apart
-    structEntry = "(.+?\{.+?\}.+?\n)"
+    # Regex patterns
+    arrayStartRegex = r"struct\s+newcam_hardpos\s+newcam_fixedcam\[\]\s+=\s+{"
+    ifdefRegex = r"#ifdef\s+PUPPYCAM_SAMPLES"
 
     if os.path.exists(filePath):
-        dataFile = open(filePath, "r")
-        data = dataFile.read()
-        dataFile.close()
+        # Read file content
+        with open(filePath, "r") as dataFile:
+            data = dataFile.read()
 
-        matchResult = re.search(arrayEntiresRegex, data, re.DOTALL)
+        # Find the position of the array start
+        arrayStartPos = re.search(arrayStartRegex, data)
+        if arrayStartPos:
+            # Extract parts of the file
+            before_array_start = data[: arrayStartPos.start()]
+            after_array_start = data[arrayStartPos.start() :]
 
-        if matchResult:
-            data = ""
-            entriesString = matchResult.group(2)
+            # Find the position of the #ifdef
+            ifdefPos = re.search(ifdefRegex, after_array_start)
+            if ifdefPos:
+                after_ifdef_start = after_array_start[ifdefPos.start() :]
+                # Remove the existing entries that match levelToReplace
+                entries_match = re.search(r"(.+?)\s*\}", after_ifdef_start, re.DOTALL)
 
-            # Iterate through each existing entry, getting rid of any that are in the level we're importing to.
-            entriesList = re.findall(structEntry, entriesString, re.DOTALL)
-            for entry in entriesList:
-                if (
-                    re.search(
-                        "(\{\s?" + levelToReplace + "\s?,)", re.sub("(/\*.+?\*/)|(//.+?\n)", "", entry), re.DOTALL
+                if entries_match:
+                    entriesString = entries_match.group(1)
+
+                    # Remove entries associated with the levelToReplace
+                    entriesList = re.findall(r".+?\{.+?\}.+?\n", entriesString, re.DOTALL)
+                    filtered_entries = ""
+                    for entry in entriesList:
+                        if (
+                            re.search(
+                                r"(\{\s?" + re.escape(levelToReplace) + r"\s?,)",
+                                re.sub(r"(/\*.+?\*/)|(//.+?\n)", "", entry),
+                                re.DOTALL,
+                            )
+                            is None
+                        ):
+                            filtered_entries += entry
+
+                    # Insert new data before #ifdef
+                    new_array_content = (
+                        before_array_start
+                        + "struct newcam_hardpos newcam_fixedcam[] = {\n"
+                        + filtered_entries
+                        + "\n"
+                        + newPuppycamTriggers
+                        + "\n"
+                        + after_ifdef_start
                     )
-                    is None
-                ):
-                    data += entry
+                else:
+                    raise PluginError("Could not find the closing '}' for 'struct newcam_hardpos newcam_fixedcam[]'.")
+            else:
+                raise PluginError("Could not find '#ifdef PUPPYCAM_SAMPLES'.")
 
-            # Add the new entries from this export, then put the file back together again.
-            data += "\n\n" + newPuppycamTriggers
-            data = matchResult.group(1) + data + "\n" + matchResult.group(3)
+            # Write the updated content back to the file
+            with open(filePath, "w", newline="\n") as dataFile:
+                dataFile.write(new_array_content)
         else:
-            raise PluginError("Could not find 'struct newcam_hardpos newcam_fixedcam[]'.")
-
-        dataFile = open(filePath, "w", newline="\n")
-        dataFile.write(data)
-        dataFile.close()
+            raise PluginError("Could not find 'struct newcam_hardpos newcam_fixedcam[] = {'.")
     else:
         raise PluginError(filePath + " does not exist.")
 
