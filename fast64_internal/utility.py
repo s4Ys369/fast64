@@ -1,3 +1,4 @@
+from pathlib import Path
 import bpy, random, string, os, math, traceback, re, os, mathutils, ast, operator
 from math import pi, ceil, degrees, radians, copysign
 from mathutils import *
@@ -423,7 +424,7 @@ def getPathAndLevel(is_custom_export, custom_export_path, custom_level_name, lev
         export_path = bpy.path.abspath(custom_export_path)
         level_name = custom_level_name
     else:
-        export_path = bpy.path.abspath(bpy.context.scene.fast64.sm64.decomp_path)
+        export_path = str(bpy.context.scene.fast64.sm64.abs_decomp_path)
         if level_enum == "Custom":
             level_name = custom_level_name
         else:
@@ -708,6 +709,8 @@ def getExportDir(customExport, dirPath, headerType, levelName, texDir, dirName):
         elif headerType == "Level":
             dirPath = os.path.join(dirPath, "levels/" + levelName)
             texDir = "levels/" + levelName
+    elif not texDir:
+        texDir = (Path(dirPath).name / Path(dirName)).as_posix()
 
     return dirPath, texDir
 
@@ -1896,3 +1899,13 @@ def create_or_get_world(scene: Scene) -> World:
         WORLD_WARNING_COUNT = 0
         print(f'No world in this file, creating world named "Fast64".')
         return bpy.data.worlds.new("Fast64")
+
+
+def set_if_different(owner: object, prop: str, value):
+    if getattr(owner, prop) != value:
+        setattr(owner, prop, value)
+
+
+def set_prop_if_in_data(owner: object, prop_name: str, data: dict, data_name: str):
+    if data_name in data:
+        set_if_different(owner, prop_name, data[data_name])
