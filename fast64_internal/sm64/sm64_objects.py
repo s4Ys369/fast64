@@ -2781,6 +2781,13 @@ class SM64_SegmentProperties(bpy.types.PropertyGroup):
     seg5_enum: bpy.props.EnumProperty(name="Segment 5 Group", default="Do Not Write", items=groupsSeg5)
     seg6_enum: bpy.props.EnumProperty(name="Segment 6 Group", default="Do Not Write", items=groupsSeg6)
 
+    # New property for common segment loads
+    load_common_segment: bpy.props.BoolProperty(
+        name="Load Segment 8 (common0)",
+        description="Include Segment 8 (common0) load",
+        default=True
+    )
+
     def draw(self, layout):
         col = layout.column()
         prop_split(col, self, "seg5_enum", "Segment 5 Select")
@@ -2792,6 +2799,8 @@ class SM64_SegmentProperties(bpy.types.PropertyGroup):
         if self.seg6_enum == "Custom":
             prop_split(col, self, "seg6_load_custom", "Segment 6 Seg")
             prop_split(col, self, "seg6_group_custom", "Segment 6 Group")
+        col = layout.column()
+        col.prop(self, "load_common_segment")  # UI checkbox for the new option
 
     def jump_link_from_enum(self, grp):
         if grp == "Do Not Write":

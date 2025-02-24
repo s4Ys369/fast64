@@ -851,6 +851,16 @@ def export_level_script_c(obj, prev_level_script, level_name, level_data, level_
         )
         replaceSegmentLoad(prev_level_script, f"_{group_seg_loads.seg6}_geo", "LOAD_RAW", 0x0D)
 
+    # Add segment 8 load
+    if obj.fast64.sm64.segment_loads.load_common_segment:
+        replaceSegmentLoad(
+            prev_level_script,
+            f"_common0_{compressionFmt}",
+            f"LOAD_{compressionFmt.upper()}",
+            0x08,
+        )
+        replaceSegmentLoad(prev_level_script, f"_common0_geo", "LOAD_RAW", 0x0F)
+
     # write data
     replaceScriptLoads(prev_level_script, obj)
     saveDataToFile(os.path.join(level_dir, "script.c"), prev_level_script.to_c(level_data.area_data))
