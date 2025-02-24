@@ -2783,9 +2783,7 @@ class SM64_SegmentProperties(bpy.types.PropertyGroup):
 
     # New property for common segment loads
     load_common_segment: bpy.props.BoolProperty(
-        name="Load Segment 8 (common0)",
-        description="Include Segment 8 (common0) load",
-        default=True
+        name="Load Segment 8 (common0)", description="Include Segment 8 (common0) load", default=True
     )
 
     def draw(self, layout):
